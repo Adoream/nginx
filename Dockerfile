@@ -91,7 +91,8 @@ RUN GPG_KEYS=573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 \
 	done; \
 	test -z "$found" && echo >&2 "error: failed to fetch GPG key $GPG_KEYS" && exit 1; \
 	# gpg --batch --verify nginx.tar.gz.asc nginx.tar.gz \
-	&& rm -rf "$GNUPGHOME" nginx.tar.gz.asc \
+	# && rm -rf "$GNUPGHOME" nginx.tar.gz.asc \
+	rm -rf "$GNUPGHOME" nginx.tar.gz.asc \
 	&& mkdir -p /usr/src \
 	&& tar -zxC /usr/src -f nginx.tar.gz \
 	&& rm nginx.tar.gz \
