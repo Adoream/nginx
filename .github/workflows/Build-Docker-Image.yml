@@ -56,7 +56,7 @@ jobs:
         if: steps.check_nginx_version.outputs.latest_nginx_version != ''
         run: |
           OPENSSL_LATEST_VERSION=$(curl -s "https://raw.githubusercontent.com/yuri-moe/package-version/master/OPENSSL")
-          echo "::set-output name=openssl_version::${OPENSSL_LATEST_VERSION}"
+          echo "latest_nginx_openssl_versionversion=${OPENSSL_LATEST_VERSION}" >> $GITHUB_OUTPUT
           
       - name: Build And Push
         uses: docker/build-push-action@v2
