@@ -15,10 +15,10 @@ jobs:
         uses: actions/checkout@v3
       
       - name: Set Up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set Up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       
       - name: Login To DockerHub
         uses: docker/login-action@v1 
@@ -26,12 +26,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       
-      - name: Installing Dependencies
-        run: |
-          sudo apt-get install -y jq curl git
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          
       - name: Get Nginx Version
         id: get_nginx_version
         run: |
@@ -52,7 +46,7 @@ jobs:
           done
 
           if ! $HAVE_TAG; then
-            git tag $LATEST_VERSION
+            git tag ${{ steps.get_nginx_version.outputs.nginx_version }}
             git push --tags
             echo "latest_nginx_version=${{ steps.get_nginx_version.outputs.nginx_version }}" >> $GITHUB_OUTPUT
           fi
@@ -62,7 +56,7 @@ jobs:
         if: steps.check_nginx_version.outputs.latest_nginx_version != ''
         run: |
           OPENSSL_LATEST_VERSION=$(curl -s "https://raw.githubusercontent.com/yuri-moe/package-version/master/OPENSSL")
-          echo "latest_nginx_openssl_versionversion=${OPENSSL_LATEST_VERSION}" >> $GITHUB_OUTPUT
+          echo "openssl_version=${OPENSSL_LATEST_VERSION}" >> $GITHUB_OUTPUT
           
       - name: Build And Push
         uses: docker/build-push-action@v2
