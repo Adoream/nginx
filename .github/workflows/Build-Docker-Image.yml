@@ -62,7 +62,7 @@ jobs:
           echo "openssl_version=${OPENSSL_LATEST_VERSION}" >> $GITHUB_OUTPUT
           
       - name: Build And Push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         if: steps.check_nginx_version.outputs.latest_nginx_version != '' && steps.get_openssl_latest_version.outputs.openssl_version != ''
         with:
           file: ./Dockerfile
