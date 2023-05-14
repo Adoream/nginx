@@ -26,6 +26,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       
+      - name: Installing Dependencies
+        run: |
+          sudo apt-get install -y jq curl git
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          
       - name: Get Nginx Version
         id: get_nginx_version
         run: |
