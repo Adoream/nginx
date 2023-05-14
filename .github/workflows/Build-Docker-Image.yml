@@ -1,59 +1,75 @@
 name: Build Docker Image
 
 on:
+  schedule:
+    - cron: '0 2 * * *'
+
   workflow_dispatch:
-  push:
-    tags:
-      - '*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:        
-      - name: CHECKOUT
-        uses: actions/checkout@v2
+      - name: Checkout
+      - uses: actions/checkout@v3
       
-      - name: SET UP QEMU
+      - name: Set Up QEMU
         uses: docker/setup-qemu-action@v1
 
-      - name: SET UP DOCKER BUILDX
+      - name: Set Up Docker Buildx
         uses: docker/setup-buildx-action@v1
       
-      - name: LOGIN TO DOCKERHUB
+      - name: Login To DockerHub
         uses: docker/login-action@v1 
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: SET OUTPUT
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF:10}
       
-      - name: GET NGINX VERSION
+      - name: Get Nginx Version
         id: get_nginx_version
         run: |
-          echo "::set-output name=nginx_version::${{ steps.vars.outputs.tag }}"
-          
-      - name: GET OPENSSL VERSION (LATEST)
-        id: get_openssl_latest_version
+          NGINX_VERSION=$(curl -k -s https://api.rua.dev/versions/latest/nginx | jq .data.version | sed s/\"//g)
+          echo $NGINX_VERSION
+          echo "nginx_version=$NGINX_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check Nginx Version
+        id: check_nginx_version
         if: steps.get_nginx_version.outputs.nginx_version != ''
+        run: |
+          HAVE_TAG=false
+          
+          for tag in $(git tag); do
+            if [  "${{ steps.get_nginx_version.outputs.nginx_version }}" == "$tag" ]; then
+              HAVE_TAG=true
+            fi
+          done
+
+          if ! $HAVE_TAG; then
+            git tag $LATEST_VERSION
+            git push --tags
+            echo "latest_nginx_version=${{ steps.get_nginx_version.outputs.nginx_version }}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Get OpenSSL Version
+        id: get_openssl_latest_version
+        if: steps.check_nginx_version.outputs.latest_nginx_version != ''
         run: |
           OPENSSL_LATEST_VERSION=$(curl -s "https://raw.githubusercontent.com/yuri-moe/package-version/master/OPENSSL")
           echo "::set-output name=openssl_version::${OPENSSL_LATEST_VERSION}"
           
-      - name: BUILD AND PUSH
+      - name: Build And Push
         uses: docker/build-push-action@v2
-        if: steps.get_nginx_version.outputs.nginx_version != '' && steps.get_openssl_latest_version.outputs.openssl_version != ''
+        if: steps.check_nginx_version.outputs.latest_nginx_version != '' && steps.get_openssl_latest_version.outputs.openssl_version != ''
         with:
           file: ./Dockerfile
           context: .
           build-args: |
-            NGINX_VERSION=${{ steps.get_nginx_version.outputs.nginx_version }}
+            NGINX_VERSION=${{ steps.check_nginx_version.outputs.latest_nginx_version }}
             OPENSSL_VERSION=${{ steps.get_openssl_latest_version.outputs.openssl_version }}
           platforms: linux/arm64, linux/amd64
           push: true
           no-cache: true
           tags: |
-            ${{ secrets.DOCKER_NS }}/teri-nginx:${{ steps.get_nginx_version.outputs.nginx_version }}
+            ${{ secrets.DOCKER_NS }}/teri-nginx:${{ steps.check_nginx_version.outputs.latest_nginx_version }}
             ${{ secrets.DOCKER_NS }}/teri-nginx:latest
